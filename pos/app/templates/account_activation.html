@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Account Activation</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f4f4f7;
+            margin: 0;
+            padding: 0;
+            color: #333333;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        .container {
+            max-width: 600px;
+            margin: 40px auto;
+            background-color: #ffffff;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+        .header {
+            background-color: #007bff;
+            color: #ffffff;
+            text-align: center;
+            padding: 25px 0;
+            font-size: 26px;
+            font-weight: bold;
+        }
+        .content {
+            padding: 30px 20px;
+            text-align: center;
+            line-height: 1.6;
+        }
+        .content p {
+            font-size: 16px;
+            margin: 15px 0;
+        }
+        .button {
+            display: inline-block;
+            margin: 20px auto;
+            background-color: #007bff;
+            color: #ffffff;
+            text-decoration: none;
+            padding: 12px 30px;
+            border-radius: 5px;
+            font-size: 16px;
+            font-weight: bold;
+            box-shadow: 0 4px 6px rgba(255, 255, 255, 0.3);
+            transition: background-color 0.3s ease, box-shadow 0.3s ease;
+        }
+        .button:hover {
+            background-color: #0056b3;
+            box-shadow: 0 6px 12px rgba(0, 123, 255, 0.5);
+        }
+        .footer {
+            background-color: #f4f4f7;
+            text-align: center;
+            padding: 20px 10px;
+            font-size: 14px;
+            color: #777777;
+        }
+        .footer a {
+            color: #007bff;
+            text-decoration: none;
+        }
+        .footer a:hover {
+            text-decoration: underline;
+        }
+        @media (max-width: 600px) {
+            .content {
+                padding: 20px 15px;
+            }
+            .button {
+                width: 100%;
+                padding: 15px 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            Activate Your Account
+        </div>
+        <div class="content">
+            <p>Hi, <strong>{{name}}</strong></p>
+            <p>Thank you for signing up! Your temporary password is:</p>
+            <p style="font-size: 18px; font-weight: bold; color: #007bff;">{{psw}}</p>
+            <p>Please change your temporary password afterwards</p>
+            <p>Click the button below to activate your account:</p>
+            <a href="http://localhost:8000/activate/{{token}}" class="button">Activate My Account</a>
+            <p>If the button above doesn’t work, copy and paste the following link into your browser:</p>
+            <p><a href="http://localhost:8000/activate/{{token}}" style="color: #007bff;">http://localhost:8000/activate/{{token}}</a></p>
+        </div>
+        <div class="footer">
+            <p>If you didn’t sign up for this account, please ignore this email or contact us at <a href="mailto:support@example.com">support@example.com</a>.</p>
+            <p>&copy; {{year}} Your Company. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>
