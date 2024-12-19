@@ -115,7 +115,7 @@ mondatory_fields = {
 }
 
 mondatory_with_condition = {
-    "cnss_number": ("CNSS Number", lambda contract_type: is_cdi_or_cdd(contract_type))
+    "cnss_number": ("CNSS Number", lambda employee: is_cdi_or_cdd(employee)) # tuple inside a dict tuple. Note: We cannot change the values of a tuple.
 }
 
 optional_fields = {
@@ -124,6 +124,11 @@ optional_fields = {
     "phone_number": "Phone Number"
 }
 
+possible_fields = {
+    **mondatory_fields, # ** lists all the options of mondary_fields dictionary
+    **mondatory_with_condition,
+    **optional_fields,
+}
 
 
 
@@ -171,9 +176,8 @@ def is_valid_date(field: str):
         return None
 
 
-def is_cdi_or_cdd(field):
-    return field in [enums.contractType.CDI, enums.contractType.CDD]
-
+def is_cdi_or_cdd(employee):
+    return employee["contract_type"].value in [enums.contractType.CDI, enums.contractType.CDD]
 
 
 def is_valid_cnss_number(field):
@@ -203,6 +207,37 @@ fields_check = {
     "employee_roles": (lambda field: are_valid_roles(field), f"Possible values are: { enums.roleType.getPossibleValues()}"),
 
 }
+
+def is_field_mondatory(employee, field):
+    return field in mondatory_fields or (field in mondatory_with_condition and mondatory_with_condition[field][1](employee))
+
+def validate_employee_data(employee):
+    errors = [] # stores the errors in a list
+    warnings = [] # stores the warnings in a list
+    wrong_cells = [] # To store wrongs cells in order to color wrong cells with red in matchy interface.
+    employee_to_add = { field: cell.value for field, cell in employee.items()}
+    for field in possible_fields:
+        if field not in employee:
+            if is_field_mondatory(employee, field):
+                errors.append(f"{possible_fields[field]} is mondatory but missing")
+            continue
+    cell = employee[field]
+    employee_to_add[field]= employee_to_add[field].strip() # strip() removes the space at beginning and at the end of the string
+
+    if employee_to_add[field] == '':
+        if is_field_mondatory(employee, field):
+            msg = f"{possible_fields[field]} is mondatory but missing"
+            errors.append(msg)
+            wrong_cells.append(schemas.MatchyWrongCell(msg, cell.rowIndex, cell.colIndex))
+        else:
+            employee_to_add[field] = None # In db will be stored as Null
+    elif field in fields_check:
+        converted_val = fields_check[field][0](employee_to_add[field])
+        if converted_val is None: 
+            msg = fields_check[field][1]
+            (errors if is_field_mondatory(employee, field) else warnings).append(msg)
+            wrong_cells.append(schemas.MatchyWrongCell(msg, cell.rowIndex, cell.colIndex))
+    return (errors, warnings, wrong_cells)
 @app.post("/employees/import")
 def importEmployees():
     pass
@@ -226,4 +261,3 @@ def upload(entry: schemas.MatchyUploadEntry, db: session = Depends(get_db)):
             status_code=400, 
             detail= f'missing mondatory fields: {(', ').join(field_names)}' 
         )
-

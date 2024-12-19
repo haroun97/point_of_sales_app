@@ -57,12 +57,20 @@ class MatchyOption(ourBaseModel):
 class ImportPossibleFields(ourBaseModel):
     possible_fields: List[MatchyOption] = []
 
-class MatchyCell(BaseModel):
+class MatchyCell(ourBaseModel):
     value: str
     rowIndex: int
     colIndex: int
 
-class MatchyUploadEntry(BaseModel):
+class MatchyUploadEntry(ourBaseModel):
     lines: List[Dict[str, MatchyCell]] # a list contains many dicts, e.g: [{CNSS Number: { 40, 1(Col), 1(row)}, {roles, vendor, 3, 5}}]
     
-    
+class MatchyWrongCell(ourBaseModel):
+    message: str
+    rowIndex: int
+    colIndex: int   
+
+class ImportResponse(ourBaseModel):
+    errors: str
+    Warnings: str
+    wrongCells: list[MatchyWrongCell]
