@@ -17,6 +17,22 @@ def get_by_email(db: Session, email: str):
 def get_all(db: Session, skip:int = 0, limit: int = 100):
     return db.query(models.employee).offset(skip).limit(limit).all()
 
+error_keys = {
+    "employee_roles_employee_id_fkey":"No employee with this id",
+    "employee_roles_pkey":"No employee role with this id",
+    "ck_employees_cnss_number":"It should be {8 digitds}.{2 digits} and it's mondatory for cdi and cdd",
+    "cnss_number":"It should be {8 digitds}.{2 digits} and it's mondatory for cdi and cdd",
+    "employees_email_key":"Email already used",
+    "employees_pkey":" No employee with id",
+}
+
+def get_error_message(error_message):
+    for error_key in error_keys:
+        if error_key in error_message:
+            return error_keys[error_key]
+        
+    return "Something went wrong"
+
 async def add(db:Session, employee: schemas.employeeCreate):
     try:
         #fix me later when reading about the security 
@@ -50,8 +66,20 @@ async def add(db:Session, employee: schemas.employeeCreate):
             }
         )
         db.commit()
+    except Exception as err:  #General error handling
+        db.rollback()
+        print(get_error_message(str(err)))
+        print("General Error:", err)
+        #Attempt to extract a status code dynamically
+        status_code = getattr(err, "status_code", 400)  #Default to 400 if not found
+        raise HTTPException(
+            status_code=status_code,
+            detail=get_error_message(str(err)),
+        )
+    '''
     except IntegrityError as db_err:  #Handle database integrity errors
         db.rollback() #Undo changes made for the database when an error accurs.
+        print(get_error_message(db_err))
         print("Database Error:", db_err)
         raise HTTPException(
             status_code=409,  #Conflict: likely a unique constraint violation
@@ -59,18 +87,12 @@ async def add(db:Session, employee: schemas.employeeCreate):
         )
     except SQLAlchemyError as sql_err:  #Detects errors related to sqlalchemy integrity constraint, such as: Unique constraint violations (e.g., duplicate primary keys). Foreign key violations. NOT NULL constraint violations.
         db.rollback()
-        print("SQLAlchemy Error:", sql_err)
+        print(get_error_message(str(sql_err)))
+        #print("SQLAlchemy Error:", sql_err)
         raise HTTPException(
             status_code=500,  #Internal Server Error for generic DB issues
             detail="A database error occurred. Please try again later.",
         )
-    except Exception as err:  #General error handling
-        db.rollback()
-        print("General Error:", err)
-        #Attempt to extract a status code dynamically
-        status_code = getattr(err, "status_code", 400)  #Default to 400 if not found
-        raise HTTPException(
-            status_code=status_code,
-            detail=str(err),
-        )
+    '''
+
     return schemas.employeeOut(**db_employee.__dict__)

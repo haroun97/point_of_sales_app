@@ -28,13 +28,14 @@ async def create_user(employee: schemas.employeeCreate, db: session = Depends(ge
     try:
         if employee.password != employee.confirm_password:
             raise HTTPException(status_code=400, detail="Password must match!")
-        db_employee = crud.get_by_email(db, email = employee.email)
+        '''db_employee = crud.get_by_email(db, email = employee.email)
         if db_employee:
             raise HTTPException(status_code=400, detail="Email already exist")
+            '''
     except IntegrityError as ie:
         db.rollback()
         print("Integrity Error:", ie)
-        raise HTTPException(
+        raise HTTPException( # This error is raied when "ennazeha" the integrity of the data is affected
             status_code=409,
             detail="Database integrity error: Possible duplicate or invalid data."
         )
@@ -130,30 +131,27 @@ possible_fields = {
     **optional_fields,
 }
 
+unique_fields = {
+    "email": models.employee.email,
+    "number": models.employee.number,
+}
 
 
 options = [
-    schemas.MatchyOption(mondatory_fields["first_name"], "first_name", True, enums.FieldType.string),
-    schemas.MatchyOption(mondatory_fields["last_name"], "last_name", True, enums.FieldType.string),
-    schemas.MatchyOption(mondatory_fields["email"], "email", True, enums.FieldType.string, [
-        schemas.MatchyCondition(enums.ConditonProperty.regex, enums.Comparer.e, email_regex),
-    ]),
-    schemas.MatchyOption(mondatory_fields["password"], "password", True, enums.FieldType.string),
-    schemas.MatchyOption(mondatory_fields["number"], "number" , True, enums.FieldType.string), # True means mondatory field
-    schemas.MatchyOption(optional_fields["Address"], "address" , False, enums.FieldType.string),
-    schemas.MatchyOption(optional_fields["Birth Date"], "birth_date", False, enums.FieldType.string, [
-        schemas.MatchyCondition(enums.ConditonProperty.regex, enums.Comparer.e, cnss_number_regex),
-    ]),
-    schemas.MatchyOption(mondatory_with_condition["CNSS Number"][0], "cnss_number", True, enums.FieldType.string),
-    schemas.MatchyOption(mondatory_fields["contract_type"], "contract_type", True, enums.FieldType.string, [schemas.MatchyCondition(enums.ConditonProperty.value, enums.Comparer._in, enums.contractType.getPossibleValues())]),
-    schemas.MatchyOption(mondatory_fields["gender"], "gender", True, enums.FieldType.string, [schemas.MatchyCondition(enums.ConditonProperty.value, enums.Comparer._in, enums.gender.getPossibleValues())]),
-    schemas.MatchyOption("Account Status", "account_status", True, enums.FieldType.string, [schemas.MatchyCondition(enums.ConditonProperty.value, enums.Comparer._in, enums.accountStatus.getPossibleValues())]),
-    schemas.MatchyOption(mondatory_fields["employee_roles"], "employee_roles", True, enums.FieldType.string, [schemas.MatchyCondition(enums.ConditonProperty.value, enums.Comparer._in, enums.gender.getPossibleValues())]),#there is no table has employee_role name
-    schemas.MatchyOption(optional_fields["phone_number"], "phone_number", False, enums.FieldType.string, [
-        schemas.MatchyCondition(enums.ConditonProperty.regex, enums.Comparer.e, phone_number_regex),
-    ]),
+    schemas.MatchyOption(display_value=mondatory_fields["first_name"], value="first_name", mondatory=True, type=enums.FieldType.string),
+    schemas.MatchyOption(display_value=mondatory_fields["last_name"], value="last_name", mondatory=True, type=enums.FieldType.string),
+    schemas.MatchyOption(display_value=mondatory_fields["email"], value="email", mondatory=True, type=enums.FieldType.string, Condition=[schemas.MatchyCondition(property=enums.ConditonProperty.regex, comparer=enums.Comparer.e, value=email_regex)]),
+    schemas.MatchyOption(display_value=mondatory_fields["password"], value="password", mondatory=True, type=enums.FieldType.string),
+    schemas.MatchyOption(display_value=mondatory_fields["number"], value="number", mondatory=True, type=enums.FieldType.string),
+    schemas.MatchyOption(display_value=optional_fields["address"], value="address", mondatory=False, type=enums.FieldType.string),
+    schemas.MatchyOption(display_value=optional_fields["birth_date"], value="birth_date", mondatory=False, type=enums.FieldType.string, Condition=[schemas.MatchyCondition(property=enums.ConditonProperty.regex, comparer=enums.Comparer.e, value=cnss_number_regex)]),
+    schemas.MatchyOption(display_value=mondatory_with_condition["cnss_number"][0], value="cnss_number", mondatory=True, type=enums.FieldType.string),
+    schemas.MatchyOption(display_value=mondatory_fields["contract_type"], value="contract_type", mondatory=True, type=enums.FieldType.string, Condition=[schemas.MatchyCondition(property=enums.ConditonProperty.value, comparer=enums.Comparer._in, value=enums.contractType.getPossibleValues())]),
+    schemas.MatchyOption(display_value=mondatory_fields["gender"], value="gender", mondatory=True, type=enums.FieldType.string, Condition=[schemas.MatchyCondition(property=enums.ConditonProperty.value, comparer=enums.Comparer._in, value=enums.gender.getPossibleValues())]),
+    schemas.MatchyOption(display_value="Account Status", value="account_status", mondatory=True, type=enums.FieldType.string, Condition=[schemas.MatchyCondition(property=enums.ConditonProperty.value, comparer=enums.Comparer._in, value=enums.accountStatus.getPossibleValues())]),
+    schemas.MatchyOption(display_value=mondatory_fields["employee_roles"], value="employee_roles", mondatory=True, type=enums.FieldType.string, Condition=[schemas.MatchyCondition(property=enums.ConditonProperty.value, comparer=enums.Comparer._in, value=enums.gender.getPossibleValues())]),
+    schemas.MatchyOption(display_value=optional_fields["phone_number"], value="phone_number", mondatory=False, type=enums.FieldType.string, Condition=[schemas.MatchyCondition(property=enums.ConditonProperty.regex, comparer=enums.Comparer.e, value=phone_number_regex)]),
 ]
-
 #move me later to util folder
 def is_regex_matched(pattern, field):
     return field if re.match(pattern, field) else None 
@@ -237,7 +235,58 @@ def validate_employee_data(employee):
             msg = fields_check[field][1]
             (errors if is_field_mondatory(employee, field) else warnings).append(msg)
             wrong_cells.append(schemas.MatchyWrongCell(msg, cell.rowIndex, cell.colIndex))
-    return (errors, warnings, wrong_cells)
+        else:
+            employee_to_add[field] = converted_val
+ 
+    return (errors, warnings, wrong_cells, employee_to_add)
+
+
+
+def valid_employees_data_and_upload(employees:list, force_upload: bool, db: session = Depends(get_db)):
+    errors = [] # stores the errors in a list
+    warnings = [] # stores the warnings in a list
+    wrong_cells = [] # To store wrongs cells in order to color wrong cells with red in matchy interface.
+    employees_to_add = [] # To store all employee data together and store them in the db at once.
+    for line, employee in enumerate(employees): # for i in range(len(employees)) line = i, employee = employees[i]
+        emp_errors, emp_warnings, emp_wrong_cells, emp = validate_employee_data(employee)
+        if emp_errors:
+            msg = {'\n'}.join(emp_errors)
+            errors.append(f"Line (line + 1):\n{msg}")
+        if emp_warnings:
+            msg = {'\n'}.join(emp_warnings)
+            errors.append(f"Line (line + 1):\n{msg}")
+        if emp_wrong_cells:
+            wrong_cells.extend(emp_wrong_cells)
+            errors.append(f"Line (line + 1):\n{msg}")
+        employees_to_add.append(emp)
+
+    for field in unique_fields:
+        values = {}
+        for line, employee in enumerate(employees):
+            cell = employee.get(field)
+            val = cell.value.strip()
+            if val == '': #If it's mondatory, email and number were already checked in fields check
+                continue
+            if val in values:
+                msg = f"{possible_fields[field]} should be unique. but this value exists more that one time in the file"
+                (errors if is_field_mondatory(employee, field) else warnings).append(msg)
+                wrong_cells.append(schemas.MatchyWrongCell(msg, cell.rowIndex, cell.colIndex))
+            else: 
+                values.add(val)
+
+            duplicated_vals = db.query(models.employee).filter(unique_fields[field]._in(values)).all()
+            if duplicated_vals:
+                msg = f"{possible_fields[field]} should be unique. {(', ').join(duplicated_vals)} already exist in databse"
+                (errors if is_field_mondatory(employee, field) else warnings).append(msg)
+                wrong_cells.append(schemas.MatchyWrongCell(msg, cell.rowIndex, cell.colIndex))
+
+    if errors or (warnings and not force_upload):
+        return schemas.ImportResponse(
+            errors=('\n').join(errors),
+            warnings=('\n').join(warnings),
+            wrongCells=wrong_cells
+        )
+
 @app.post("/employees/import")
 def importEmployees():
     pass
@@ -259,5 +308,6 @@ def upload(entry: schemas.MatchyUploadEntry, db: session = Depends(get_db)):
         field_names = [display for field, display in missing_mondatory_fields.items()]        
         raise HTTPException(
             status_code=400, 
-            detail= f'missing mondatory fields: {(', ').join(field_names)}' 
+            detail= f"missing mondatory fields: {(', ').join(field_names)}"
         )
+
