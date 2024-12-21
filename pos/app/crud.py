@@ -21,10 +21,10 @@ error_keys = {
     "employee_roles_employee_id_fkey":"No employee with this id",
     "employee_roles_pkey":"No employee role with this id",
     "ck_employees_cnss_number":"It should be {8 digitds}.{2 digits} and it's mondatory for cdi and cdd",
-    "cnss_number":"It should be {8 digitds}.{2 digits} and it's mondatory for cdi and cdd",
     "employees_email_key":"Email already used",
     "employees_pkey":" No employee with id",
 }
+
 
 def get_error_message(error_message):
     for error_key in error_keys:
@@ -32,6 +32,18 @@ def get_error_message(error_message):
             return error_keys[error_key]
         
     return "Something went wrong"
+
+def add_error(text, db:Session):
+    try:
+        db.add(models.error(
+            text = text,
+        ))
+        db.commit()
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail="Something went wrong",
+        )
 
 async def add(db:Session, employee: schemas.employeeCreate):
     try:
@@ -68,13 +80,14 @@ async def add(db:Session, employee: schemas.employeeCreate):
         db.commit()
     except Exception as err:  #General error handling
         db.rollback()
-        print(get_error_message(str(err)))
-        print("General Error:", err)
+        text = str(err)
+        print(get_error_message(text))
+       # add_error(text, db)
         #Attempt to extract a status code dynamically
         status_code = getattr(err, "status_code", 400)  #Default to 400 if not found
         raise HTTPException(
             status_code=status_code,
-            detail=get_error_message(str(err)),
+            detail=get_error_message(text),
         )
     '''
     except IntegrityError as db_err:  #Handle database integrity errors
