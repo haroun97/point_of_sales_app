@@ -82,7 +82,7 @@ async def add(db:Session, employee: schemas.employeeCreate):
         db.rollback()
         text = str(err)
         print(get_error_message(text))
-       # add_error(text, db)
+        add_error(text, db)
         #Attempt to extract a status code dynamically
         status_code = getattr(err, "status_code", 400)  #Default to 400 if not found
         raise HTTPException(
