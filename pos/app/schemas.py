@@ -11,6 +11,10 @@ class ourBaseModel(BaseModel):
     class config:
         orm_mode = True
 
+class baseOut(ourBaseModel):
+    detail: str
+    status_code: int
+
 class employeeBase(ourBaseModel):
     
     first_name: str 
@@ -37,10 +41,6 @@ class employeeOut(employeeBase):
 class confirmAccount(ourBaseModel):
     confirmation_code: str
 
-class baseOut(ourBaseModel):
-    detail: str
-    status_code: int
-
 class MatchyCondition(ourBaseModel):
     property: ConditonProperty
     comparer: Optional [Comparer]
@@ -64,13 +64,13 @@ class MatchyCell(ourBaseModel):
 
 class MatchyUploadEntry(ourBaseModel):
     lines: List[Dict[str, MatchyCell]] # a list contains many dicts, e.g: [{CNSS Number: { 40, 1(Col), 1(row)}, {roles, vendor, 3, 5}}]
-    
+    forcedUpload: Optional[bool] = False
 class MatchyWrongCell(ourBaseModel):
     message: str
     rowIndex: int
     colIndex: int   
 
-class ImportResponse(ourBaseModel):
+class ImportResponse(baseOut):
     errors: str
     Warnings: str
     wrongCells: list[MatchyWrongCell]

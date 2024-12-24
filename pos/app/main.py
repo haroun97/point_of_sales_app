@@ -1,12 +1,30 @@
 from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi.middleware.cors import CORSMiddleware
 from app import crud, schemas, emailUtil, enums, models
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.orm import session
 from .database import sessionLocal
 from datetime import datetime
 import re
+from crud import add_error, get_error_message
 app = FastAPI()
 
+# Fix me: use specific origins later
+""" origins = [
+    "http://localhost.tiangolo.com",
+    "https://localhost.tiangolo.com",
+    "http://localhost",
+    "http://localhost:8080",
+] """
+
+app.add_middleware(
+    CORSMiddleware,
+    #allow_origins=origins,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 def get_db():
     db = sessionLocal()
     try:
@@ -243,50 +261,71 @@ def validate_employee_data(employee):
 
 
 def valid_employees_data_and_upload(employees:list, force_upload: bool, db: session = Depends(get_db)):
-    errors = [] # stores the errors in a list
-    warnings = [] # stores the warnings in a list
-    wrong_cells = [] # To store wrongs cells in order to color wrong cells with red in matchy interface.
-    employees_to_add = [] # To store all employee data together and store them in the db at once.
-    for line, employee in enumerate(employees): # for i in range(len(employees)) line = i, employee = employees[i]
-        emp_errors, emp_warnings, emp_wrong_cells, emp = validate_employee_data(employee)
-        if emp_errors:
-            msg = {'\n'}.join(emp_errors)
-            errors.append(f"Line (line + 1):\n{msg}")
-        if emp_warnings:
-            msg = {'\n'}.join(emp_warnings)
-            errors.append(f"Line (line + 1):\n{msg}")
-        if emp_wrong_cells:
-            wrong_cells.extend(emp_wrong_cells)
-            errors.append(f"Line (line + 1):\n{msg}")
-        employees_to_add.append(emp)
+    try:
+        errors = [] # stores the errors in a list
+        warnings = [] # stores the warnings in a list
+        wrong_cells = [] # To store wrongs cells in order to color wrong cells with red in matchy interface.
+        employees_to_add = [] # To store all employee data together and store them in the db at once.
+        roles_per_email = {}
+        roles =[]
+        for line, employee in enumerate(employees): # for i in range(len(employees)) line = i, employee = employees[i]
+            emp_errors, emp_warnings, emp_wrong_cells, emp = validate_employee_data(employee)
+            if emp_errors:
+                msg = {'\n'}.join(emp_errors)
+                errors.append(f"Line {line + 1}:\n{msg}")
+            if emp_warnings:
+                msg = {'\n'}.join(emp_warnings)
+                errors.append(f"Line {line + 1}:\n{msg}")
+            if emp_wrong_cells:
+                wrong_cells.extend(emp_wrong_cells)
+                errors.append(f"Line {line + 1}:\n{msg}")
+            employees_to_add.append(models.employee(**emp.__dict__))
+            roles_per_email[employee.email] = emp.get('roles', []) # Email unique
+            roles.append(emp.get('roles', []) )
+        for field in unique_fields:
+            values = {}
+            for line, employee in enumerate(employees):
+                cell = employee.get(field)
+                val = cell.value.strip()
+                if val == '': # If it's mondatory, email and number were already checked in fields check
+                    continue
+                if val in values:
+                    msg = f"{possible_fields[field]} should be unique. but this value exists more that one time in the file"
+                    (errors if is_field_mondatory(employee, field) else warnings).append(msg)
+                    wrong_cells.append(schemas.MatchyWrongCell(msg, cell.rowIndex, cell.colIndex))
+                else: 
+                    values.add(val)
 
-    for field in unique_fields:
-        values = {}
-        for line, employee in enumerate(employees):
-            cell = employee.get(field)
-            val = cell.value.strip()
-            if val == '': #If it's mondatory, email and number were already checked in fields check
-                continue
-            if val in values:
-                msg = f"{possible_fields[field]} should be unique. but this value exists more that one time in the file"
-                (errors if is_field_mondatory(employee, field) else warnings).append(msg)
-                wrong_cells.append(schemas.MatchyWrongCell(msg, cell.rowIndex, cell.colIndex))
-            else: 
-                values.add(val)
+                duplicated_vals = db.query(models.employee).filter(unique_fields[field]._in(values)).all()
+                if duplicated_vals:
+                    msg = f"{possible_fields[field]} should be unique. {(', ').join(duplicated_vals)} already exist in databse"
+                    (errors if is_field_mondatory(employee, field) else warnings).append(msg)
+                    wrong_cells.append(schemas.MatchyWrongCell(msg, cell.rowIndex, cell.colIndex))
 
-            duplicated_vals = db.query(models.employee).filter(unique_fields[field]._in(values)).all()
-            if duplicated_vals:
-                msg = f"{possible_fields[field]} should be unique. {(', ').join(duplicated_vals)} already exist in databse"
-                (errors if is_field_mondatory(employee, field) else warnings).append(msg)
-                wrong_cells.append(schemas.MatchyWrongCell(msg, cell.rowIndex, cell.colIndex))
+        if errors or (warnings and not force_upload):
+            return schemas.ImportResponse(
+                errors=('\n').join(errors),
+                warnings=('\n').join(warnings),
+                wrongCells=wrong_cells
+            )
 
-    if errors or (warnings and not force_upload):
-        return schemas.ImportResponse(
-            errors=('\n').join(errors),
-            warnings=('\n').join(warnings),
-            wrongCells=wrong_cells
-        )
+        db.add_all(employees_to_add)
+        db.flush() # Field id contains value (email)
 
+        #case 1: imagine employees lost their order
+
+        db.add_all([[models.employeeRole(employee_id=emp.id, role=roles) for emp in roles_per_email[emp.email]] for emp in employees_to_add])
+        db.commit()
+
+    except Exception as err:  #General error handling
+        db.rollback()
+        text = str(err)
+        add_error(text, db)
+        raise HTTPException(status_code=500, detail=get_error_message(text))
+    return schemas.ImportResponse(
+        detail="file uploaded successfully",
+        status_code=201
+    )
 @app.post("/employees/import")
 def importEmployees():
     pass
@@ -310,4 +349,5 @@ def upload(entry: schemas.MatchyUploadEntry, db: session = Depends(get_db)):
             status_code=400, 
             detail= f"missing mondatory fields: {(', ').join(field_names)}"
         )
+    return valid_employees_data_and_upload(employees, entry.forcedUpload, db)
 
