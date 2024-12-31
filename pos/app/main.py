@@ -6,7 +6,6 @@ from sqlalchemy.orm import session
 from .database import sessionLocal
 from datetime import datetime
 import re
-from crud import add_error, get_error_message
 app = FastAPI()
 
 # Fix me: use specific origins later
@@ -294,9 +293,9 @@ def valid_employees_data_and_upload(employees:list, force_upload: bool, db: sess
             if emp_wrong_cells:
                 wrong_cells.extend(emp_wrong_cells)
                 errors.append(f"Line {line + 1}:\n{msg}")
+        
+            roles_per_email[emp.get("email")] = emp.pop('employee_roles') # Email unique
             employees_to_add.append(models.employee(**emp))
-            roles_per_email[employee.email] = emp.get('roles', []) # Email unique
-            roles.append(emp.get('roles', []) )
         for field in unique_fields:
             values = {}
             for line, employee in enumerate(employees):
@@ -311,7 +310,7 @@ def valid_employees_data_and_upload(employees:list, force_upload: bool, db: sess
                 else: 
                     values.add(val)
 
-                duplicated_vals = db.query(models.employee).filter(unique_fields[field]._in(values)).all()
+                duplicated_vals = db.query(models.employee).filter(unique_fields[field].in_(values)).all()
                 if duplicated_vals:
                     msg = f"{possible_fields[field]} should be unique. {(', ').join(duplicated_vals)} already exist in databse"
                     (errors if is_field_mondatory(employee, field) else warnings).append(msg)
@@ -321,22 +320,28 @@ def valid_employees_data_and_upload(employees:list, force_upload: bool, db: sess
             return schemas.ImportResponse(
                 errors=('\n').join(errors),
                 warnings=('\n').join(warnings),
-                wrongCells=wrong_cells
+                wrongCells=wrong_cells,
+                detail="Something went wrong",
+                status_code="400",
             )
 
         db.add_all(employees_to_add)
         db.flush() # Field id contains value (email)
 
         #case 1: imagine employees lost their order
-
+        employee_roles = []
+        for emp in employees_to_add:
+            for role in roles_per_email[emp.email]:
+                employee_roles.append(models.employeeRole(employee_id=em.id, role=role))
+                
         db.add_all([[models.employeeRole(employee_id=emp.id, role=roles) for emp in roles_per_email[emp.email]] for emp in employees_to_add])
         db.commit()
 
     except Exception as err:  #General error handling
         db.rollback()
         text = str(err)
-        add_error(text, db)
-        raise HTTPException(status_code=500, detail=get_error_message(text))
+        crud.add_error(text, db)
+        raise HTTPException(status_code=500, detail=crud.get_error_message(text))
     return schemas.ImportResponse(
         detail="file uploaded successfully",
         status_code=201

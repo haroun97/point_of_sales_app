@@ -71,6 +71,6 @@ class MatchyWrongCell(ourBaseModel):
     colIndex: int   
 
 class ImportResponse(baseOut):
-    errors: str
-    Warnings: str
-    wrongCells: list[MatchyWrongCell]
+    errors: Optional[str] = None
+    Warnings: Optional[str] = None
+    wrongCells: Optional[list[MatchyWrongCell]] = []

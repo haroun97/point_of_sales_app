@@ -4,6 +4,7 @@ import { Option } from 'src/libs/matchy/src/models/classes/option';
 import { ImportPossibleFields } from 'src/models/interfaces/importPossibleField';
 import { Matchy } from 'src/libs/matchy/src/main';
 import { UploadEntry } from 'src/libs/matchy/src/models/classes/uploadEntry';
+import { MatchyUploadEntry } from 'src/models/classes/MatchyUploadEntry'
 @Component({
   selector: 'app-import-employees',
   imports: [],
@@ -23,17 +24,11 @@ export class ImportEmployeesComponent implements OnInit {
       document.getElementById("matchy")?.appendChild(matchy);
 
       matchy.submit = async(data: UploadEntry) => {
-          const entry: MatchyUploadEntry = MatchyUploadEntry;
-          en
-          entry.focrceUpload = false;
-
-          this.employeeService.upload(data).subscribe((data:BaseOut) => {
-          return this.http.post.post<BaseOut>(endPointUrl, data)
-        }
-          
-        )
+          const entry = new MatchyUploadEntry(data.lines, false);
+          this.employeeService.upload(entry).subscribe((data: BaseOut) => {
+              // do what you want
+        })
       };
-
     })
   }
 }

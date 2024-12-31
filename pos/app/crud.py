@@ -30,7 +30,6 @@ def get_error_message(error_message):
     for error_key in error_keys:
         if error_key in error_message:
             return error_keys[error_key]
-        
     return "Something went wrong"
 
 def add_error(text, db:Session):
