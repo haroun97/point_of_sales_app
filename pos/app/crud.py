@@ -66,7 +66,7 @@ async def add(db:Session, employee: schemas.employeeCreate):
         #    db.flush() #update changes in database.
         #    db.refresh(db_role)
         db.add_all([models.employeeRole(role=role, employee_id=db_employee.id) for role in roles])
-        #add confirmation code
+        #add confirmation code fix me later, duplicated code
         activation_code = models.accountActivation(employee_id=db_employee.id, email=db_employee.email, status=enums.tokenStatus.PENDING, token=uuid.uuid1())
         db.add(activation_code)
         #send confirmation email

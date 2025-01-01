@@ -1,3 +1,4 @@
+import uuid
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from app import crud, schemas, emailUtil, enums, models
@@ -241,7 +242,7 @@ fields_check = {
 def is_field_mondatory(employee, field):
     return field in mondatory_fields or (field in mondatory_with_condition and mondatory_with_condition[field][1](employee))
 
-def validate_employee_data(employee):
+async def validate_employee_data(employee):
     errors = [] # stores the errors in a list
     warnings = [] # stores the warnings in a list
     wrong_cells = [] # To store wrongs cells in order to color wrong cells with red in matchy interface.
@@ -295,7 +296,10 @@ def valid_employees_data_and_upload(employees:list, force_upload: bool, db: sess
                 errors.append(f"Line {line + 1}:\n{msg}")
         
             roles_per_email[emp.get("email")] = emp.pop('employee_roles') # Email unique
+            emp['password'] = uuid.uuid1() # It allows us to generate password to employee
             employees_to_add.append(models.employee(**emp))
+
+        
         for field in unique_fields:
             values = {}
             for line, employee in enumerate(employees):
@@ -335,7 +339,27 @@ def valid_employees_data_and_upload(employees:list, force_upload: bool, db: sess
                 employee_roles.append(models.employeeRole(employee_id=em.id, role=role))
                 
         db.add_all([[models.employeeRole(employee_id=emp.id, role=roles) for emp in roles_per_email[emp.email]] for emp in employees_to_add])
-        db.commit()
+        db.flush()
+
+        activation_code_to_add = []
+        email_data = []
+        for emp in employees_to_add:
+            token = uuid.uuid1()
+            activation_code = models.accountActivation(employee_id=emp.id, email=emp.email, status=enums.tokenStatus.PENDING, token=uuid.uuid1())
+            activation_code_to_add.append(activation_code)
+            email_data.append([emp.email],{
+            "name": emp.first_name,
+            "code": token,
+            "psw": emp.password
+
+            })
+        db.add(activation_code)
+        db.flush()
+        for email_datum in activation_code:
+            #send confirmation email
+            await emailUtil.simple_send(email_datum[0], email_datum[1]
+            )
+        db.flush()
 
     except Exception as err:  #General error handling
         db.rollback()
