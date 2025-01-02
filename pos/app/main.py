@@ -242,7 +242,7 @@ fields_check = {
 def is_field_mondatory(employee, field):
     return field in mondatory_fields or (field in mondatory_with_condition and mondatory_with_condition[field][1](employee))
 
-async def validate_employee_data(employee):
+def validate_employee_data(employee):
     errors = [] # stores the errors in a list
     warnings = [] # stores the warnings in a list
     wrong_cells = [] # To store wrongs cells in order to color wrong cells with red in matchy interface.
@@ -275,7 +275,7 @@ async def validate_employee_data(employee):
 
 
 
-def valid_employees_data_and_upload(employees:list, force_upload: bool, db: session = Depends(get_db)):
+async def valid_employees_data_and_upload(employees:list, force_upload: bool, db: session = Depends(get_db)):
     try:
         errors = [] # stores the errors in a list
         warnings = [] # stores the warnings in a list
@@ -314,11 +314,18 @@ def valid_employees_data_and_upload(employees:list, force_upload: bool, db: sess
                 else: 
                     values.add(val)
 
-                duplicated_vals = db.query(models.employee).filter(unique_fields[field].in_(values)).all()
+                duplicated_vals = set(db.query(unique_fields[field]).filter(unique_fields[field].in_(values)).all())
+                duplicated_vals = {str([val[0] for val in duplicated_vals])}
                 if duplicated_vals:
                     msg = f"{possible_fields[field]} should be unique. {(', ').join(duplicated_vals)} already exist in databse"
                     (errors if is_field_mondatory(employee, field) else warnings).append(msg)
-                    wrong_cells.append(schemas.MatchyWrongCell(message=msg, rowIndex=cell.rowIndex, colIndex=cell.colIndex))
+                    for employee in employees:
+                        cell = employee.get(field)
+                        val = cell.value.strip()
+                        if val in duplicated_vals:
+                            wrong_cells.append(schemas.MatchyWrongCell(message=msg, rowIndex=cell.rowIndex, colIndex=cell.colIndex))
+
+
 
         if errors or (warnings and not force_upload):
             return schemas.ImportResponse(
@@ -347,19 +354,19 @@ def valid_employees_data_and_upload(employees:list, force_upload: bool, db: sess
             token = uuid.uuid1()
             activation_code = models.accountActivation(employee_id=emp.id, email=emp.email, status=enums.tokenStatus.PENDING, token=uuid.uuid1())
             activation_code_to_add.append(activation_code)
-            email_data.append([emp.email],{
+            email_data.append(([emp.email],{
             "name": emp.first_name,
             "code": token,
             "psw": emp.password
+            }))
 
-            })
-        db.add(activation_code)
-        db.flush()
-        for email_datum in activation_code:
+        db.add_all(activation_code_to_add)
+
+        for email_datum in email_data:
             #send confirmation email
-            await emailUtil.simple_send(email_datum[0], email_datum[1]
-            )
-        db.flush()
+            await emailUtil.simple_send(email_datum[0], email_datum[1])
+
+        db.commit()
 
     except Exception as err:  #General error handling
         db.rollback()
@@ -381,7 +388,7 @@ def getPossibleFields (db: session = Depends(get_db)):
     )
     
 @app.post("/employees/test") # it was "/employees/csv"
-def upload(entry: schemas.MatchyUploadEntry, db: session = Depends(get_db)):
+async def upload(entry: schemas.MatchyUploadEntry, db: session = Depends(get_db)):
     employees = entry.lines
     if not employees:
         raise HTTPException(status_code=400, detail='Nothing to do, empty file' )
@@ -393,5 +400,5 @@ def upload(entry: schemas.MatchyUploadEntry, db: session = Depends(get_db)):
             status_code=400, 
             detail= f"missing mondatory fields: {(', ').join(missing_mondatory_fields)}" # it was join (field_names)
         )
-    return valid_employees_data_and_upload(employees, entry.forcedUpload, db)
+    return await valid_employees_data_and_upload(employees, entry.forcedUpload, db)
 
