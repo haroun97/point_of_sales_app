@@ -1,5 +1,5 @@
 import uuid
-from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi import FastAPI, Depends, HTTPException, status, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from app import crud, schemas, emailUtil, enums, models
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
@@ -275,7 +275,7 @@ def validate_employee_data(employee):
 
 
 
-async def valid_employees_data_and_upload(employees:list, force_upload: bool, db: session = Depends(get_db)):
+def valid_employees_data_and_upload(employees:list, force_upload: bool, backgroundTask: BackgroundTasks, db: session = Depends(get_db)):
     try:
         errors = [] # stores the errors in a list
         warnings = [] # stores the warnings in a list
@@ -364,7 +364,8 @@ async def valid_employees_data_and_upload(employees:list, force_upload: bool, db
 
         for email_datum in email_data:
             #send confirmation email
-            await emailUtil.simple_send(email_datum[0], email_datum[1])
+            backgroundTask.add_task(emailUtil.simple_send,email_datum[0], email_datum[1])
+            
 
         db.commit()
 
@@ -388,7 +389,7 @@ def getPossibleFields (db: session = Depends(get_db)):
     )
     
 @app.post("/employees/test") # it was "/employees/csv"
-async def upload(entry: schemas.MatchyUploadEntry, db: session = Depends(get_db)):
+async def upload(entry: schemas.MatchyUploadEntry, backgroundTask: BackgroundTasks, db: session = Depends(get_db)):
     employees = entry.lines
     if not employees:
         raise HTTPException(status_code=400, detail='Nothing to do, empty file' )
@@ -400,5 +401,5 @@ async def upload(entry: schemas.MatchyUploadEntry, db: session = Depends(get_db)
             status_code=400, 
             detail= f"missing mondatory fields: {(', ').join(missing_mondatory_fields)}" # it was join (field_names)
         )
-    return await valid_employees_data_and_upload(employees, entry.forcedUpload, db)
+    return valid_employees_data_and_upload(employees, entry.forcedUpload, backgroundTask, db)
 
