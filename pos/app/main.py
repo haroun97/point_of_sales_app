@@ -1,3 +1,4 @@
+from typing import Annotated
 import uuid
 from fastapi import FastAPI, Depends, HTTPException, status, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
@@ -25,13 +26,25 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+#Dependency
+async def pagination_params(skip: int = 0, limit: int = 10):
+    return {"skip": skip, "limit":limit }
+
 def get_db():
     db = sessionLocal()
     try:
         yield db
     finally:
         db.close()
-
+paginationDep = Annotated[dict, Depends(pagination_params)]
+dbDep = Annotated[session, Depends(get_db)]
+@app.get("/employee/")
+def get_all(db: dbDep , pagination_params: paginationDep ):   
+    return db.query(models.employee).all()
+     
+def get_all_products(db: dbDep, pagination_params: paginationDep):   
+    return db.query(models.product).all()
 
 @app.get("/")
 async def root():
