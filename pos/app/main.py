@@ -4,7 +4,7 @@ from fastapi import FastAPI, Depends, HTTPException, status, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from app import crud, schemas, emailUtil, enums, models
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
-from sqlalchemy.orm import session
+from sqlalchemy.orm import Session  # This imports the type
 from .database import sessionLocal
 from datetime import datetime
 import re
@@ -28,8 +28,11 @@ app.add_middleware(
 )
 
 #Dependency
-async def pagination_params(skip: int = 0, limit: int = 10):
-    return {"skip": skip, "limit":limit }
+class PaginationParams:
+    def __init__(self, q: str | None = None, skip: int = 0, limit: int = 100):
+        self.q = q
+        self.skip = skip
+        self.limit = limit
 
 def get_db():
     db = sessionLocal()
@@ -37,14 +40,16 @@ def get_db():
         yield db
     finally:
         db.close()
-paginationDep = Annotated[dict, Depends(pagination_params)]
-dbDep = Annotated[session, Depends(get_db)]
+
+paginationDep = Annotated[PaginationParams, Depends()]
+dbDep = Annotated[Session, Depends(get_db)]
+
 @app.get("/employee/")
 def get_all(db: dbDep , pagination_params: paginationDep ):   
     return db.query(models.employee).all()
      
 def get_all_products(db: dbDep, pagination_params: paginationDep):   
-    return db.query(models.product).all()
+    return db.query(models.Product).all()
 
 @app.get("/")
 async def root():
@@ -55,7 +60,7 @@ async def root():
     )
 
 @app.post("/employee/", response_model=schemas.employeeOut)
-async def create_user(employee: schemas.employeeCreate, db: session = Depends(get_db)):
+async def create_user(employee: schemas.employeeCreate, db: Session = Depends(get_db)):
     try:
         if employee.password != employee.confirm_password:
             raise HTTPException(status_code=400, detail="Password must match!")
@@ -87,7 +92,7 @@ async def create_user(employee: schemas.employeeCreate, db: session = Depends(ge
     return await crud.add(db=db, employee=employee)
 
 @app.patch("/employee", response_model=schemas.baseOut)
-def confirm_account(confirAccountInput: schemas.confirmAccount, db:session = Depends(get_db)): #Depends means we have dependencies with database.
+def confirm_account(confirAccountInput: schemas.confirmAccount, db:Session = Depends(get_db)): #Depends means we have dependencies with database.
     try:    
         confirmation_code = crud.get_confirmation_code(db, confirAccountInput.confirmation_code)
         if not confirmation_code:
@@ -288,7 +293,7 @@ def validate_employee_data(employee):
 
 
 
-def valid_employees_data_and_upload(employees:list, force_upload: bool, backgroundTask: BackgroundTasks, db: session = Depends(get_db)):
+def valid_employees_data_and_upload(employees:list, force_upload: bool, backgroundTask: BackgroundTasks, db: Session = Depends(get_db)):
     try:
         errors = [] # stores the errors in a list
         warnings = [] # stores the warnings in a list
@@ -396,13 +401,13 @@ def importEmployees():
     pass
 
 @app.get("/employee/possibleImportFields")
-def getPossibleFields (db: session = Depends(get_db)):
+def getPossibleFields (db: Session = Depends(get_db)):
     return schemas.ImportPossibleFields(
         possible_fields=options,
     )
     
 @app.post("/employees/test") # it was "/employees/csv"
-async def upload(entry: schemas.MatchyUploadEntry, backgroundTask: BackgroundTasks, db: session = Depends(get_db)):
+async def upload(entry: schemas.MatchyUploadEntry, backgroundTask: BackgroundTasks, db: Session = Depends(get_db)):
     employees = entry.lines
     if not employees:
         raise HTTPException(status_code=400, detail='Nothing to do, empty file' )
