@@ -1,6 +1,6 @@
 from typing import Annotated
 import uuid
-from fastapi import FastAPI, Depends, HTTPException, status, BackgroundTasks
+from fastapi import FastAPI, Depends, HTTPException, Header, status, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from app import crud, schemas, emailUtil, enums, models
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
@@ -40,6 +40,16 @@ def get_db():
         yield db
     finally:
         db.close()
+        
+async def verify_token(x_token: Annotated[str, Header()]):
+    if x_token != "fake-super-secret-token":
+        raise HTTPException(status_code=400, detail="X-Token header invalid")
+
+
+async def verify_key(x_key: Annotated[str, Header()]):
+    if x_key != "fake-super-secret-key":
+        raise HTTPException(status_code=400, detail="X-Key header invalid")
+    return x_key
 
 paginationDep = Annotated[PaginationParams, Depends()]
 dbDep = Annotated[Session, Depends(get_db)]
@@ -48,7 +58,8 @@ dbDep = Annotated[Session, Depends(get_db)]
 def get_all(db: dbDep , pagination_params: paginationDep ):   
     return db.query(models.employee).all()
      
-def get_all_products(db: dbDep, pagination_params: paginationDep):   
+def get_all_products(db: dbDep, pagination_params: paginationDep, key: Annotated[str, Depends(verify_key)]):   
+    # The key is need to fill something
     return db.query(models.Product).all()
 
 @app.get("/")
