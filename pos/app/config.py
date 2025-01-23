@@ -13,6 +13,10 @@ class Settings(BaseSettings):
     mail_from: str
     mail_server: str
 
+    secret_key: str
+    algorithm: str
+    access_token_expire_min: int
+    
     model_config = SettingsConfigDict(env_file=".env")
 
 settings = Settings()

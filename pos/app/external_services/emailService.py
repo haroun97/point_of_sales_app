@@ -4,7 +4,7 @@ from starlette.responses import JSONResponse
 from fastapi_mail import FastMail, MessageSchema, ConnectionConfig, MessageType
 from pydantic import EmailStr, BaseModel
 from typing import List
-from .config import settings
+from ..config import settings
 
 conf = ConnectionConfig(
     MAIL_USERNAME = settings.mail_username,
