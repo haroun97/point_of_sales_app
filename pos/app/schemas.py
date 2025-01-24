@@ -1,5 +1,5 @@
 from datetime import datetime, date
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr
 from app.enums import contractType, gender, accountStatus, roleType
 from typing import List, Optional, Dict
 
@@ -40,6 +40,10 @@ class employeeOut(employeeBase):
 
 class confirmAccount(ourBaseModel):
     confirmation_code: str
+
+class ForgetPassword(ourBaseModel):
+    email: EmailStr
+    
 
 class MatchyCondition(ourBaseModel):
     property: ConditonProperty
