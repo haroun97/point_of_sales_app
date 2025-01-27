@@ -1,14 +1,11 @@
 from fastapi import APIRouter
-from fastapi import HTTPException, status, BackgroundTasks
+from fastapi import HTTPException, BackgroundTasks
 from app import schemas, enums, models
-from sqlalchemy.exc import IntegrityError, SQLAlchemyError
-from app.crud import employee
 from app.crud.error import add_error, get_error_message
 from app.dependencies import dbDep, paginationDep
 from datetime import datetime
 import re
 import uuid
-
 from app.external_services import emailService
 
 

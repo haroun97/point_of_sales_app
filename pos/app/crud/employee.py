@@ -15,7 +15,7 @@ error_keys = {
     "employees_email_key":"Email already used",
     "employees_pkey":" No employee with id",
 }
-
+# confirm account code
 def get_confirmation_code(db: Session, code: str):
     return db.query(models.accountActivation).filter(models.accountActivation.token == code).first()
 
@@ -25,15 +25,28 @@ def add_confirmation_code(db: Session,db_employee: models.employee):
     return activation_code
 
 def edit_confirmation_code(db: Session, id: int, new_data: dict):
-        db.query(models.accountActivation).filter(models.accountActivation.id == id).update(new_data, synchronize_session=False)
+        db.query(models.accountActivation).filter(id).update(new_data, synchronize_session=False)
 
+# reset password code
+def get_reset_code(db: Session, code: str):
+    return db.query(models.resetPassword).filter(models.resetPassword.token == code).first()
+
+def add_reset_code(db: Session,db_employee: models.employee):
+    reset_code = models.resetPassword(employee_id=db_employee.id, email=db_employee.email, status=enums.tokenStatus.PENDING, token=uuid.uuid1())
+    db.add(reset_code)
+    return reset_code
+
+def edit_reset_code(db: Session, id: int, new_data: dict):
+    db.query(models.resetPassword).filter(id).update(new_data, synchronize_session=False)
+
+# employee code
 def get_employee(db: Session, id: int):
     return db.query(models.employee).filter(models.employee.id == id).first()
 
 def edit_employee(db: Session, id: int, new_data: dict):
     db.query(models.employee).filter(models.employee.id == id).update(new_data, synchronize_session=False)
     
-def get_by_email(db: Session, email: str):
+def get_employee_by_email(db: Session, email: str):
     return db.query(models.employee).filter(models.employee.email == email).first()
 
 def get_employee(db: Session, skip:int = 0, limit: int = 100):
@@ -59,7 +72,7 @@ async def add(db:Session, employee: schemas.employeeCreate):
             "token": activation_code.token,
             "psw": employee.password,
             "name": db_employee.first_name
-            }
+            }, enums.EmailTemplate.ConfirmAccount,
         )
         db.commit()
     except Exception as err:  #General error handling

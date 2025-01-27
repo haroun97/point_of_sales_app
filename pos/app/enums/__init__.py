@@ -7,3 +7,4 @@ from .matchyComparer import Comparer
 from .matchyConditionProperty import ConditonProperty
 from .matchyFieldType import FieldType
 from .basicEnum import basicEnum
+from .emailTemplate import EmailTemplate

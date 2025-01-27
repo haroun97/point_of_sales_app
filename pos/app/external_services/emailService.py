@@ -4,6 +4,8 @@ from starlette.responses import JSONResponse
 from fastapi_mail import FastMail, MessageSchema, ConnectionConfig, MessageType
 from pydantic import EmailStr, BaseModel
 from typing import List
+
+from app.enums.emailTemplate import EmailTemplate
 from ..config import settings
 
 conf = ConnectionConfig(
@@ -19,7 +21,11 @@ conf = ConnectionConfig(
     TEMPLATE_FOLDER= Path(__file__).parent / 'templates'
 )
 
-async def simple_send(emails: list[EmailStr], body: dict) -> JSONResponse:
+template_name_per_template = {
+    EmailTemplate.ConfirmAccount: "account_activation.html",
+    EmailTemplate.ResetPassword: "reset_password.html"
+}
+async def simple_send(emails: list[EmailStr], body: dict, template:EmailTemplate):
     try:
         message = MessageSchema(
             subject="Fastapi-Mail module",
@@ -28,7 +34,7 @@ async def simple_send(emails: list[EmailStr], body: dict) -> JSONResponse:
             subtype=MessageType.html)
 
         fm = FastMail(conf)
-        await fm.send_message(message, template_name="account_activation.html")
+        await fm.send_message(message, template_name=template_name_per_template[template])
     except FileNotFoundError as file_err:
         # Handle missing template file errors
         print("Template File Error:", file_err)

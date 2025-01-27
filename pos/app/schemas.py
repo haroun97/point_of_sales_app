@@ -43,7 +43,12 @@ class confirmAccount(ourBaseModel):
 
 class ForgetPassword(ourBaseModel):
     email: EmailStr
-    
+
+class ResetPassword(ourBaseModel):
+    reset_code: str
+    psw: str
+    confirm_psw: str
+
 
 class MatchyCondition(ourBaseModel):
     property: ConditonProperty
@@ -69,6 +74,7 @@ class MatchyCell(ourBaseModel):
 class MatchyUploadEntry(ourBaseModel):
     lines: List[Dict[str, MatchyCell]] # a list contains many dicts, e.g: [{CNSS Number: { 40, 1(Col), 1(row)}, {roles, vendor, 3, 5}}]
     forcedUpload: Optional[bool] = False
+
 class MatchyWrongCell(ourBaseModel):
     message: str
     rowIndex: int

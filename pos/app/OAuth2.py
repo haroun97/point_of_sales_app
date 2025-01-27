@@ -34,9 +34,9 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None):
     return encoded_jwt
 
 def get_employee(db, email):
-    return db.query(models.Employee).filter(models.employee.email==email).first()
+    return db.query(models.employee).filter(models.employee.email==email).first()
 
-async def get_curr_employee(token: token):
+def get_curr_employee(db, token):
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",

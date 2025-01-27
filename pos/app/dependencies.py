@@ -2,7 +2,6 @@ from typing import Annotated
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session  # This imports the type
 from fastapi import Depends
-
 from app.OAuth2 import get_curr_employee
 from .database import get_db
 
