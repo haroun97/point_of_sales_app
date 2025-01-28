@@ -22,10 +22,17 @@ def get_all(db: dbDep , pagination_params: paginationDep ):
      
 @app.post("/", response_model=schemas.employeeOut)
 async def add(employee: schemas.employeeCreate, db: dbDep):
-    if employee.password != employee.confirm_password:
-        raise HTTPException(status_code=400, detail="Password must match!")
+    try:
+        db_employee = await employee.add_employee(db=db, employee=employee)
+    except Exception as err:  #General error handling
+        db.rollback()
+        text = str(err)
+        add_error(text, db)
+        raise HTTPException(status_code=500, detail=get_error_message(text))
 
-    return await employee.add(db=db, employee=employee)
+    return schemas.employeeOut(**db_employee.__dict__)
+
+
 
 
 email_regex = r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$' # r is raw string is used to make backslashes part of the string not a part of the code.
