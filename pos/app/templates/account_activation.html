@@ -88,8 +88,12 @@
         </div>
         <div class="content">
             <p>Hi, <strong>{{name}}</strong></p>
-            <p>Thank you for signing up! Your temporary password is:</p>
-            <p style="font-size: 18px; font-weight: bold; color: #007bff;">{{psw}}</p>
+            {% if psw %}
+            
+                <p>Thank you for signing up! Your temporary password is:</p>
+                <p style="font-size: 18px; font-weight: bold; color: #007bff;">{{psw}}</p>
+                
+            {% endif %}
             <p>Please change your temporary password afterwards</p>
             <p>Click the button below to activate your account:</p>
             <a href="http://localhost:8000/activate/{{token}}" class="button">Activate My Account</a>

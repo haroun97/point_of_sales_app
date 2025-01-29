@@ -34,6 +34,9 @@ class employeeCreate(employeeBase):
     password: str | None = None
     confirm_password: str | None = None
 
+class EmployeeEdit(employeeCreate):
+    actual_password: str | None = None
+
 class employeeOut(employeeBase):
     id: int
     created_on: datetime

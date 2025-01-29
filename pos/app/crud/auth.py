@@ -1,11 +1,5 @@
-from fastapi import HTTPException
 from sqlalchemy.orm import Session
-from sqlalchemy.exc import IntegrityError, SQLAlchemyError
-
-from app.OAuth2 import get_password_hash
-from app import models, schemas, enums
-from app.crud.error import add_error, get_error_message
-from app.external_services import emailService
+from app import models, enums
 import uuid
 
 error_keys = {
@@ -21,8 +15,8 @@ error_keys = {
 def get_confirmation_code(db: Session, code: str):
     return db.query(models.accountActivation).filter(models.accountActivation.token == code).first()
 
-def add_confirmation_code(db: Session,db_employee: models.employee):
-    activation_code = models.accountActivation(employee_id=db_employee.id, email=db_employee.email, status=enums.tokenStatus.PENDING, token=uuid.uuid1())
+def add_confirmation_code(db: Session, id:int, email:str):
+    activation_code = models.accountActivation(employee_id=id, email=email, status=enums.tokenStatus.PENDING, token=uuid.uuid1())
     db.add(activation_code)
     return activation_code
 

@@ -14,12 +14,15 @@ app = APIRouter(
     tags=["Employee"],
 )
 
+@app.put("/{id}", response_model=schemas.employeeOut)
+def edit(id: int, entry:schemas.employeeOut):
+    pass
 
 @app.get("/")
 def get_all(db: dbDep , pagination_params: paginationDep ):   
     pass
     #return db.query(models.employee).all()
-     
+
 @app.post("/", response_model=schemas.employeeOut)
 async def add(employee: schemas.employeeCreate, db: dbDep):
     try:
