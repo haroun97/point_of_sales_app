@@ -1,24 +1,37 @@
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
-
+from sqlalchemy import func
 from app.OAuth2 import get_password_hash
 from app import models, schemas, enums
 from app.crud.auth import add_confirmation_code
+from app.dependencies import PaginationParams, paginationParams
 from app.external_services import emailService
 
 # employee code
 def get_employee(db: Session, id: int):
     return db.query(models.employee).filter(models.employee.id == id).first()
 
-def edit_employee(db: Session, id: int, new_data: dict):
+def sudo_edit_employee(db: Session, id: int, new_data: dict):
     db.query(models.employee).filter(models.employee.id == id).update(new_data, synchronize_session=False)
     
 def get_employee_by_email(db: Session, email: str):
     return db.query(models.employee).filter(models.employee.email == email).first()
 
-def get_employee(db: Session, skip:int = 0, limit: int = 100):
-    return db.query(models.employee).offset(skip).limit(limit).all()
+def div_ceil(nominator, denominator):
+    full_pages = nominator // denominator
+    additional_page = 1 if nominator % denominator > 0 else 0
+    return full_pages + additional_page
 
+
+def get_employees(db: Session, pagination_param: PaginationParams, name_substr):
+    query = db.query(models.employee)
+    if name_substr:
+        query = query.filter(func.lower(func.concat(models.employee.first_name,' ', models.last_name)).contains(func.lower(name_substr)))
+    
+    total_records = query.count()
+    total_pages = div_ceil(total_records, pagination_param.page_size)
+    employees = query.limit(pagination_param.page_size.offset((pagination_param.page_number-1)*pagination_param.page_size))    
+    return (employees, total_records, total_pages)
 async def add_employee(db:Session, employee: schemas.employeeCreate):
     employee.password = get_password_hash(employee.password)
     employee_data = employee.model_dump()
@@ -43,7 +56,7 @@ async def add_employee(db:Session, employee: schemas.employeeCreate):
     db.commit()
     return db_employee
 
-async def edit_emp(db: Session, id: int, entry: schemas.EmployeeEdit):
+async def edit_empployee(db: Session, id: int, entry: schemas.EmployeeEdit):
     query = db.query(models.employee).filter(models.employee.id == id)
     employee_in_db = query.first()
 
@@ -51,7 +64,7 @@ async def edit_emp(db: Session, id: int, entry: schemas.EmployeeEdit):
         raise HTTPException(status_code=400, detail="Employee not found")
     
     fields_to_update = entry.model_dump()
-    for field in ["email", "password", "confirm_password", "roles", "actual_password"]
+    for field in ["email", "password", "confirm_password", "roles", "actual_password"]:
         fields_to_update.pop(field)
 
 

@@ -9,12 +9,11 @@ dbDep = Annotated[Session, Depends(get_db)]
 
 #Dependency
 class PaginationParams:
-    def __init__(self, q: str | None = None, skip: int = 0, limit: int = 100):
-        self.q = q
-        self.skip = skip
-        self.limit = limit
-
-paginationDep = Annotated[PaginationParams, Depends()]
+    def __init__(self, page_size: int = 10, page_number: int = 1):
+        self.page_size = page_size
+        self.page_number = page_number
+    
+paginationParams = Annotated[PaginationParams, Depends()]
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token") # create schema
 tokenDep = Annotated[str, Depends(oauth2_scheme)]

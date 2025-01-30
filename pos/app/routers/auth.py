@@ -1,7 +1,7 @@
 from app import enums, models
 from app import schemas
 from app.OAuth2 import ACCESS_TOKEN_EXPIRE_MINUTES, create_access_token, authenticate_employee, get_password_hash
-from app.crud.employee import add_reset_code, edit_reset_code, get_employee_by_email, get_confirmation_code, edit_employee, edit_confirmation_code, get_reset_code
+from app.crud.employee import add_reset_code, edit_reset_code, get_employee_by_email, get_confirmation_code, sudo_edit_employee, edit_confirmation_code, get_reset_code
 from app.crud.error import add_error, get_error_message
 from app.dependencies import dbDep, formaDataDep
 from app.external_services import emailService
@@ -55,7 +55,7 @@ def confirm_account(confirAccountInput: schemas.confirmAccount, db:dbDep): #Depe
         if diff > 3600:
             raise HTTPException(status_code=400, detail="token expired")
         
-        edit_employee(confirmation_code.employee_id, {models.employee.account_status: enums.accountStatus.ACTIVE})
+        sudo_edit_employee(confirmation_code.employee_id, {models.employee.account_status: enums.accountStatus.ACTIVE})
         edit_confirmation_code(confirmation_code.id, {models.accountActivation.status: enums.tokenStatus.USED})
 
         db.commit() #Save changes in the database
@@ -116,7 +116,7 @@ def confirm_account(entry: schemas.ResetPassword, db:dbDep): #Depends means we h
             raise HTTPException(status_code=400, detail="password do not match")
         
         
-        edit_employee(reset_code.employee_id, {models.employee.password: get_password_hash(entry.psw)})
+        sudo_edit_employee(reset_code.employee_id, {models.employee.password: get_password_hash(entry.psw)})
         edit_reset_code(reset_code.id, {models.resetPassword.status: enums.tokenStatus.USED})
 
         db.commit() #Save changes in the database

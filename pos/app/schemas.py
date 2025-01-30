@@ -14,6 +14,11 @@ class ourBaseModel(BaseModel):
 class baseOut(ourBaseModel):
     detail: str
     status_code: int
+class PagedResponse(baseOut):
+    page_number: int
+    page_size: int
+    total_pages: int
+    total_records: int
 
 class employeeBase(ourBaseModel):
     
@@ -40,6 +45,9 @@ class EmployeeEdit(employeeCreate):
 class employeeOut(employeeBase):
     id: int
     created_on: datetime
+
+class EmployeesOut(PagedResponse):
+    list: List[employeeOut]
 
 class confirmAccount(ourBaseModel):
     confirmation_code: str

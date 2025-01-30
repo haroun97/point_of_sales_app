@@ -1,8 +1,9 @@
 from fastapi import APIRouter
 from fastapi import HTTPException, BackgroundTasks
 from app import schemas, enums, models
+from app.crud.employee import add_employee, edit_employee, get_employees
 from app.crud.error import add_error, get_error_message
-from app.dependencies import dbDep, paginationDep
+from app.dependencies import dbDep, paginationParams
 from datetime import datetime
 import re
 import uuid
@@ -14,19 +15,42 @@ app = APIRouter(
     tags=["Employee"],
 )
 
-@app.put("/{id}", response_model=schemas.employeeOut)
-def edit(id: int, entry:schemas.employeeOut):
-    pass
-
-@app.get("/")
-def get_all(db: dbDep , pagination_params: paginationDep ):   
-    pass
-    #return db.query(models.employee).all()
-
+@app.put("/{id}", response_model=schemas.baseOut)
+async def edit(id: int, entry:schemas.employeeOut, db: dbDep):
+    try:
+        await edit_employee(db, id, entry)
+    except Exception as err:  #General error handling
+        db.rollback()
+        text = str(err)
+        add_error(text, db)
+        raise HTTPException(status_code=500, detail=get_error_message(text))
+    return schemas.baseOut(
+        status_code=201,
+        detail="User update",
+    )
+@app.get("/all", response_model=schemas.employeeOut)
+def get( db: dbDep, pagination_param: paginationParams,name_substr: str = None):   
+    try:
+        employees, total_records, total_pages = get_employees(db, pagination_param, name_substr)
+    except Exception as err:  #General error handling
+        db.rollback()
+        text = str(err)
+        add_error(text, db)
+        raise HTTPException(status_code=500, detail=get_error_message(text))
+    
+    return schemas.baseOut(
+        status_code=200,
+        detail="All employees",
+        list=[schemas.employeeOut(**employee.__dict__) for employee in employees], # to update later
+        page_number = pagination_param.page_number,
+        page_size =  pagination_param.page_size,
+        total_pages = total_pages,
+        total_records =  total_records,
+    )
 @app.post("/", response_model=schemas.employeeOut)
 async def add(employee: schemas.employeeCreate, db: dbDep):
     try:
-        db_employee = await employee.add_employee(db=db, employee=employee)
+        db_employee = await add_employee(db=db, employee=employee) # check add_employee 
     except Exception as err:  #General error handling
         db.rollback()
         text = str(err)
