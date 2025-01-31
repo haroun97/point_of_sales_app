@@ -1,7 +1,8 @@
 from app import enums, models
 from app import schemas
 from app.OAuth2 import ACCESS_TOKEN_EXPIRE_MINUTES, create_access_token, authenticate_employee, get_password_hash
-from app.crud.employee import add_reset_code, edit_reset_code, get_employee_by_email, get_confirmation_code, sudo_edit_employee, edit_confirmation_code, get_reset_code
+from app.crud.auth import add_reset_code, edit_reset_code, get_confirmation_code, edit_confirmation_code, get_reset_code
+from app.crud.employee import  sudo_edit_employee, get_employee_by_email
 from app.crud.error import add_error, get_error_message
 from app.dependencies import dbDep, formaDataDep
 from app.external_services import emailService

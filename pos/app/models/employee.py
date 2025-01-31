@@ -1,4 +1,5 @@
 from sqlalchemy import Column, Integer, String, Enum, Date, DateTime, CheckConstraint, func
+from sqlalchemy.orm import relationship
 from ..database import Base
 from app.enums import gender, accountStatus, contractType
 
@@ -21,6 +22,7 @@ class employee(Base):
     cnss_number = Column(String, nullable=True)
     created_on = Column(DateTime, nullable=False, server_default=func.now())
 
+    role = relationship("")
     __table_args__ = (  
         CheckConstraint("(contract_type IN ('CDI', 'CDD') AND cnss_number IS NOT NULL AND cnss_number ~ '^\\d{8}-\\d{2}$') "
             "OR (contract_type IN ('APPRENTI', 'SIVP') AND (cnss_number IS NULL OR cnss_number ~ '^\\d{8}-\\d{2}$'))",

@@ -1,13 +1,15 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from fastapi import HTTPException, BackgroundTasks
 from app import schemas, enums, models
-from app.crud.employee import add_employee, edit_employee, get_employees
+from app.crud.employee import add_employee, sudo_edit_employee, get_employees
 from app.crud.error import add_error, get_error_message
-from app.dependencies import dbDep, paginationParams
+from app.database import get_db
+from app.dependencies import dbDep, get_current_employee, paginationParams, currentEmployee
 from datetime import datetime
 import re
 import uuid
 from app.external_services import emailService
+from sqlalchemy.orm import Session  # This imports the type
 
 
 app = APIRouter(
@@ -18,7 +20,7 @@ app = APIRouter(
 @app.put("/{id}", response_model=schemas.baseOut)
 async def edit(id: int, entry:schemas.employeeOut, db: dbDep):
     try:
-        await edit_employee(db, id, entry)
+        await sudo_edit_employee(db, id, entry)
     except Exception as err:  #General error handling
         db.rollback()
         text = str(err)
@@ -48,7 +50,7 @@ def get( db: dbDep, pagination_param: paginationParams,name_substr: str = None):
         total_records =  total_records,
     )
 @app.post("/", response_model=schemas.employeeOut)
-async def add(employee: schemas.employeeCreate, db: dbDep):
+async def add(employee: schemas.employeeCreate, db: Session = Depends(get_db), current_user = Depends(get_current_employee)):
     try:
         db_employee = await add_employee(db=db, employee=employee) # check add_employee 
     except Exception as err:  #General error handling
@@ -289,7 +291,7 @@ def valid_employees_data_and_upload(employees:list, force_upload: bool, backgrou
         employee_roles = []
         for emp in employees_to_add:
             for role in roles_per_email[emp.email]:
-                employee_roles.append(models.employeeRole(employee_id=em.id, role=role))
+                employee_roles.append(models.employeeRole(employee_id=emp.id, role=role)) # check emp.id
                 
         db.add_all([[models.employeeRole(employee_id=emp.id, role=roles) for emp in roles_per_email[emp.email]] for emp in employees_to_add])
         db.flush()

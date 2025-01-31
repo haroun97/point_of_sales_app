@@ -18,5 +18,8 @@ paginationParams = Annotated[PaginationParams, Depends()]
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token") # create schema
 tokenDep = Annotated[str, Depends(oauth2_scheme)]
 formaDataDep = Annotated[OAuth2PasswordRequestForm, Depends()]
+
 def get_current_employee(db: dbDep, token: tokenDep):
     return get_curr_employee(db, token)
+
+currentEmployee = Annotated[any, Depends(get_current_employee)]

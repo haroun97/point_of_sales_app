@@ -1,19 +1,14 @@
 from typing import Annotated
 from fastapi import FastAPI, Depends, HTTPException, Header, status
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from pydantic import BaseModel
-from passlib.context import CryptContext
-from jwt.exceptions import InvalidTokenError
-from .database import sessionLocal
-from datetime import datetime, timedelta, timezone
-import jwt
+
 from .routers import employee
 
 
 app = FastAPI()
 
-app.include_router(employee.router)
+#app.include_router(employee.router)
 
 
 
@@ -45,7 +40,7 @@ fake_users_db = {
 
 
 
-async def get_current_active_user(
+""" async def get_current_active_user(
     current_user: Annotated[User, Depends(get_current_user)],
 ):
     if current_user.disabled:
@@ -60,9 +55,7 @@ async def read_users_me(
     current_user: Annotated[User, Depends(get_current_active_user)],
 ):
     return current_user
-
-
-
+ """
 # Fix me: use specific origins later
 """ origins = [
     "http://localhost.tiangolo.com",
