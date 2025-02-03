@@ -8,7 +8,7 @@ from .routers import employee
 
 app = FastAPI()
 
-#app.include_router(employee.router)
+app.include_router(employee.router)
 
 
 

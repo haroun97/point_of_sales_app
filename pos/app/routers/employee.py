@@ -17,6 +17,8 @@ app = APIRouter(
     tags=["Employee"],
 )
 
+#fix me later
+error_keys = {}
 @app.put("/{id}", response_model=schemas.baseOut)
 async def edit(id: int, entry:schemas.employeeOut, db: dbDep):
     try:
@@ -25,7 +27,7 @@ async def edit(id: int, entry:schemas.employeeOut, db: dbDep):
         db.rollback()
         text = str(err)
         add_error(text, db)
-        raise HTTPException(status_code=500, detail=get_error_message(text))
+        raise HTTPException(status_code=500, detail=get_error_message(text, error_keys))
     return schemas.baseOut(
         status_code=201,
         detail="User update",
@@ -38,12 +40,12 @@ def get( db: dbDep, pagination_param: paginationParams,name_substr: str = None):
         db.rollback()
         text = str(err)
         add_error(text, db)
-        raise HTTPException(status_code=500, detail=get_error_message(text))
+        raise HTTPException(status_code=500, detail=get_error_message(text, error_keys))
     
     return schemas.baseOut(
         status_code=200,
         detail="All employees",
-        list=[schemas.employeeOut(**employee.__dict__) for employee in employees], # to update later
+        list=[schemas.employeeOut(**employee.__dict__, roles=[employee_role.role for employee_role in employee.roles]) for employee in employees], # to update later
         page_number = pagination_param.page_number,
         page_size =  pagination_param.page_size,
         total_pages = total_pages,
@@ -57,7 +59,7 @@ async def add(employee: schemas.employeeCreate, db: Session = Depends(get_db), c
         db.rollback()
         text = str(err)
         add_error(text, db)
-        raise HTTPException(status_code=500, detail=get_error_message(text))
+        raise HTTPException(status_code=500, detail=get_error_message(text, error_keys))
 
     return schemas.employeeOut(**db_employee.__dict__)
 
@@ -321,7 +323,7 @@ def valid_employees_data_and_upload(employees:list, force_upload: bool, backgrou
         db.rollback()
         text = str(err)
         add_error(text, db)
-        raise HTTPException(status_code=500, detail=get_error_message(text))
+        raise HTTPException(status_code=500, detail=get_error_message(text, error_keys))
     return schemas.ImportResponse(
         detail="file uploaded successfully",
         status_code=201

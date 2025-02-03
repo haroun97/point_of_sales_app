@@ -16,6 +16,9 @@ app = APIRouter(
     tags=["Authentification"],
 )
 
+# fix me later
+error_keys = {}
+
 @app.post("/token",response_model=schemas.Token)
 async def login_for_access_token(db: dbDep, form_data: formaDataDep):
     try:
@@ -40,7 +43,7 @@ async def login_for_access_token(db: dbDep, form_data: formaDataDep):
         db.rollback()
         text = str(err)
         employee.add_error(text, db)
-        raise HTTPException(status_code=500, detail=employee.get_error_message(text))
+        raise HTTPException(status_code=500, detail=text)
     
     return Token(access_token=access_token, token_type="bearer")
 
@@ -56,15 +59,15 @@ def confirm_account(confirAccountInput: schemas.confirmAccount, db:dbDep): #Depe
         if diff > 3600:
             raise HTTPException(status_code=400, detail="token expired")
         
-        sudo_edit_employee(confirmation_code.employee_id, {models.employee.account_status: enums.accountStatus.ACTIVE})
-        edit_confirmation_code(confirmation_code.id, {models.accountActivation.status: enums.tokenStatus.USED})
+        sudo_edit_employee(db, confirmation_code.employee_id, {models.employee.account_status: enums.accountStatus.ACTIVE})
+        edit_confirmation_code(db, confirmation_code.id, {models.accountActivation.status: enums.tokenStatus.USED})
 
         db.commit() #Save changes in the database
     except Exception as err:  #General error handling
         db.rollback()
         text = str(err)
         add_error(text, db)
-        raise HTTPException(status_code=500, detail=get_error_message(text))
+        raise HTTPException(status_code=500, detail=get_error_message(text, error_keys))
     
     return schemas.baseOut(
         detail="Account confirmed",
@@ -92,15 +95,15 @@ async def forgot_password(entry: schemas.ForgetPassword, db: dbDep):
         db.rollback()
         text = str(err)
         add_error(text, db)
-        raise HTTPException(status_code=500, detail=employee.get_error_message(text))
+        raise HTTPException(status_code=500, detail=employee.get_error_message(text, error_keys))
     
     return schemas.baseOut(
-        message="Something went wrong",
-        status=status.HTTP_200_OK
+        detail="Something went wrong",
+        status_code=status.HTTP_200_OK
     )
 
 @app.patch("/resetPassword", response_model=schemas.baseOut)
-def confirm_account(entry: schemas.ResetPassword, db:dbDep): #Depends means we have dependencies with database.
+def reset_password(entry: schemas.ResetPassword, db:dbDep): #Depends means we have dependencies with database.
     try:    
         reset_code = get_reset_code(db, entry.reset_code)
         if not reset_code:
@@ -117,15 +120,15 @@ def confirm_account(entry: schemas.ResetPassword, db:dbDep): #Depends means we h
             raise HTTPException(status_code=400, detail="password do not match")
         
         
-        sudo_edit_employee(reset_code.employee_id, {models.employee.password: get_password_hash(entry.psw)})
-        edit_reset_code(reset_code.id, {models.resetPassword.status: enums.tokenStatus.USED})
+        sudo_edit_employee(db, reset_code.employee_id, {models.employee.password: get_password_hash(entry.psw)})
+        edit_reset_code(db, reset_code.id, {models.resetPassword.status: enums.tokenStatus.USED})
 
         db.commit() #Save changes in the database
     except Exception as err:  #General error handling
         db.rollback()
         text = str(err)
         add_error(text, db)
-        raise HTTPException(status_code=500, detail=get_error_message(text))
+        raise HTTPException(status_code=500, detail=get_error_message(text, error_keys)(text, error_keys))
     
     return schemas.baseOut(
         detail="Password changed",

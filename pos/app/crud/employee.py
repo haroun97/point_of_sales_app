@@ -30,7 +30,7 @@ def get_employees(db: Session, pagination_param: PaginationParams, name_substr):
     
     total_records = query.count()
     total_pages = div_ceil(total_records, pagination_param.page_size)
-    employees = query.limit(pagination_param.page_size.offset((pagination_param.page_number-1)*pagination_param.page_size))    
+    employees = query.limit(pagination_param.page_size.offset((pagination_param.page_number-1)*pagination_param.page_size)).all() 
     return (employees, total_records, total_pages)
 async def add_employee(db:Session, employee: schemas.employeeCreate):
     employee.password = get_password_hash(employee.password)

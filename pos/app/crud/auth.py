@@ -21,7 +21,7 @@ def add_confirmation_code(db: Session, id:int, email:str):
     return activation_code
 
 def edit_confirmation_code(db: Session, id: int, new_data: dict):
-        db.query(models.accountActivation).filter(id).update(new_data, synchronize_session=False)
+        db.query(models.accountActivation).filter(models.accountActivation.id == id).update(new_data, synchronize_session=False)
 
 # reset password code
 def get_reset_code(db: Session, code: str):
@@ -33,4 +33,4 @@ def add_reset_code(db: Session,db_employee: models.employee):
     return reset_code
 
 def edit_reset_code(db: Session, id: int, new_data: dict):
-    db.query(models.resetPassword).filter(id).update(new_data, synchronize_session=False)
+    db.query(models.resetPassword).filter(models.resetPassword.id == id).update(new_data, synchronize_session=False)
